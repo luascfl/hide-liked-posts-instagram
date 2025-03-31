@@ -1,10 +1,12 @@
 // ==UserScript==
 // @name         Hide Liked Posts on Instagram (With Periodic Scroll Fix)
 // @namespace    http://tampermonkey.net/
-// @version      1.8
+// @version      1.9
 // @description  Hides posts you've liked on instagram.com, scrolling automatically every 2 seconds to ensure the page loads correctly without black screens.
 // @author       luascfl
 // @match        https://www.instagram.com/*
+// @home         https://github.com/luascfl/hide-liked-posts-instagram
+// @supportURL   https://github.com/luascfl/hide-liked-posts-instagram/issues
 // @updateURL    https://raw.githubusercontent.com/luascfl/hide-liked-posts-instagram/main/hide-liked-posts-instagram.user.js
 // @downloadURL  https://raw.githubusercontent.com/luascfl/hide-liked-posts-instagram/main/hide-liked-posts-instagram.user.js
 // @grant        none
