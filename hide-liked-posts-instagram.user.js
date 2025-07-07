@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hide Liked Posts on Instagram (Auto Scroll)
 // @namespace    http://tampermonkey.net/
-// @version      2.0
+// @version      2.1
 // @description  Hides posts you've liked on instagram.com and auto-scrolls to load all content
 // @author       luascfl (improved)
 // @match        https://www.instagram.com/*
@@ -34,7 +34,6 @@
 
     // Function to check if loading spinner exists
     function isLoadingSpinnerPresent() {
-        // Procura o SVG de carregamento específico ou qualquer SVG com aria-label="Carregando..."
         const spinner = document.querySelector('svg[aria-label="Carregando..."]');
         return spinner !== null;
     }
@@ -58,7 +57,7 @@
         // Scroll interval - desce a página a cada 1 segundo
         scrollInterval = setInterval(() => {
             scrollToBottom();
-            hideLikedPosts(); // Esconde posts curtidos enquanto faz scroll
+            hideLikedPosts();
         }, 1000);
 
         // Check interval - verifica o spinner a cada 500ms
@@ -96,6 +95,13 @@
 
         // Faz uma última verificação para esconder posts curtidos
         hideLikedPosts();
+        
+        // Atualiza o botão
+        const button = document.querySelector('#auto-scroll-button');
+        if (button) {
+            button.textContent = '▼ Auto Scroll';
+            button.style.background = '#262626';
+        }
     }
 
     // Function to observe content dynamically
@@ -114,6 +120,7 @@
     // Adiciona botão para iniciar/parar auto-scroll manualmente
     function addControlButton() {
         const button = document.createElement('button');
+        button.id = 'auto-scroll-button';
         button.textContent = '▼ Auto Scroll';
         button.style.cssText = `
             position: fixed;
@@ -128,18 +135,25 @@
             cursor: pointer;
             font-weight: bold;
             box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
         `;
 
         button.addEventListener('click', () => {
             if (isAutoScrolling) {
                 stopAutoScroll();
-                button.textContent = '▼ Auto Scroll';
-                button.style.background = '#262626';
             } else {
                 startAutoScroll();
                 button.textContent = '■ Parar Scroll';
                 button.style.background = '#e60023';
             }
+        });
+
+        button.addEventListener('mouseenter', () => {
+            button.style.transform = 'scale(1.05)';
+        });
+
+        button.addEventListener('mouseleave', () => {
+            button.style.transform = 'scale(1)';
         });
 
         document.body.appendChild(button);
@@ -150,8 +164,9 @@
         observeContent();
         addControlButton();
         
-        // Inicia auto-scroll automaticamente (remova esta linha se quiser controle manual)
-        startAutoScroll();
+        // NÃO inicia auto-scroll automaticamente
+        // Se quiser que inicie automaticamente, descomente a linha abaixo:
+        // startAutoScroll();
     }, 2000);
 
 })();
