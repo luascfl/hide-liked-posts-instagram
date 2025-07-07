@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name         Hide Liked Posts on Instagram (With Periodic Scroll Fix)
+// @name         Hide Liked Posts on Instagram (Auto Scroll)
 // @namespace    http://tampermonkey.net/
-// @version      1.9
-// @description  Hides posts you've liked on instagram.com, scrolling automatically every 2 seconds to ensure the page loads correctly without black screens.
-// @author       luascfl
+// @version      2.0
+// @description  Hides posts you've liked on instagram.com and auto-scrolls to load all content
+// @author       luascfl (improved)
 // @match        https://www.instagram.com/*
 // @home         https://github.com/luascfl/hide-liked-posts-instagram
 // @supportURL   https://github.com/luascfl/hide-liked-posts-instagram/issues
@@ -16,50 +16,142 @@
 (function() {
     'use strict';
 
+    let isAutoScrolling = false;
+    let loadingSpinnerLastSeen = null;
+    let scrollInterval = null;
+    let checkInterval = null;
+
     // Function to hide liked posts
     function hideLikedPosts() {
-        const posts = document.querySelectorAll('article'); // Select posts
+        const posts = document.querySelectorAll('article');
         posts.forEach(post => {
-            // Check if the post has a "liked" icon with aria-label="Descurtir"
             const likeIcon = post.querySelector('svg[aria-label="Descurtir"]');
             if (likeIcon && post.style.display !== 'none') {
-                post.style.display = 'none'; // Hide the liked post
+                post.style.display = 'none';
             }
         });
     }
 
-    // Function to perform a page-down-like scroll and return to the original position
-    function performScrollFix() {
-        const scrollStep = window.innerHeight * 2; // Double the height of the viewport for 2-page scroll
-        const currentScroll = window.scrollY; // Current scroll position
+    // Function to check if loading spinner exists
+    function isLoadingSpinnerPresent() {
+        // Procura o SVG de carregamento específico ou qualquer SVG com aria-label="Carregando..."
+        const spinner = document.querySelector('svg[aria-label="Carregando..."]');
+        return spinner !== null;
+    }
 
-        // Scroll down two "pages" and return
-        window.scrollTo(0, currentScroll + scrollStep);
-        setTimeout(() => {
-            window.scrollTo(0, currentScroll);
-        }, 30); // Reduced time to 30ms for faster, imperceptible return
+    // Function to scroll to bottom
+    function scrollToBottom() {
+        window.scrollTo({
+            top: document.documentElement.scrollHeight,
+            behavior: 'smooth'
+        });
+    }
+
+    // Function to start auto-scrolling
+    function startAutoScroll() {
+        if (isAutoScrolling) return;
+        
+        console.log('Iniciando auto-scroll...');
+        isAutoScrolling = true;
+        loadingSpinnerLastSeen = Date.now();
+
+        // Scroll interval - desce a página a cada 1 segundo
+        scrollInterval = setInterval(() => {
+            scrollToBottom();
+            hideLikedPosts(); // Esconde posts curtidos enquanto faz scroll
+        }, 1000);
+
+        // Check interval - verifica o spinner a cada 500ms
+        checkInterval = setInterval(() => {
+            if (isLoadingSpinnerPresent()) {
+                loadingSpinnerLastSeen = Date.now();
+                console.log('Spinner de carregamento detectado');
+            } else {
+                const timeSinceLastSpinner = Date.now() - loadingSpinnerLastSeen;
+                
+                if (timeSinceLastSpinner >= 5000) {
+                    console.log('Spinner não detectado por 5 segundos. Parando auto-scroll.');
+                    stopAutoScroll();
+                }
+            }
+        }, 500);
+    }
+
+    // Function to stop auto-scrolling
+    function stopAutoScroll() {
+        if (!isAutoScrolling) return;
+
+        console.log('Auto-scroll finalizado');
+        isAutoScrolling = false;
+        
+        if (scrollInterval) {
+            clearInterval(scrollInterval);
+            scrollInterval = null;
+        }
+        
+        if (checkInterval) {
+            clearInterval(checkInterval);
+            checkInterval = null;
+        }
+
+        // Faz uma última verificação para esconder posts curtidos
+        hideLikedPosts();
     }
 
     // Function to observe content dynamically
     function observeContent() {
-        const feed = document.querySelector('main'); // Main container for posts
+        const feed = document.querySelector('main');
         if (feed) {
-            // Observe changes in the main content area
             const observer = new MutationObserver(() => {
                 hideLikedPosts();
             });
 
             observer.observe(feed, { childList: true, subtree: true });
-            // Initial run
             hideLikedPosts();
         }
     }
 
-    // Run the observer on page load
-    observeContent();
+    // Adiciona botão para iniciar/parar auto-scroll manualmente
+    function addControlButton() {
+        const button = document.createElement('button');
+        button.textContent = '▼ Auto Scroll';
+        button.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            background: #262626;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        `;
 
-    // Periodic scroll every 2 seconds
-    setInterval(() => {
-        performScrollFix();
-    }, 2000); // 2-second interval
+        button.addEventListener('click', () => {
+            if (isAutoScrolling) {
+                stopAutoScroll();
+                button.textContent = '▼ Auto Scroll';
+                button.style.background = '#262626';
+            } else {
+                startAutoScroll();
+                button.textContent = '■ Parar Scroll';
+                button.style.background = '#e60023';
+            }
+        });
+
+        document.body.appendChild(button);
+    }
+
+    // Aguarda a página carregar e inicia
+    setTimeout(() => {
+        observeContent();
+        addControlButton();
+        
+        // Inicia auto-scroll automaticamente (remova esta linha se quiser controle manual)
+        startAutoScroll();
+    }, 2000);
+
 })();
